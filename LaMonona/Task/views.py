@@ -38,19 +38,17 @@ def user_list(request):
 
 # La vista original de combined_charts no es necesaria si userlist_view ya la maneja,
 # pero la mantengo por si la necesitas para otro propósito.
-def combined_charts(request):
-    if request.user.is_authenticated:
-        return render(request, 'userlist.html') # Ahora renderiza userlist.html
-    else:
-        return render(request, 'signin.html')
-
 def signin(request):
     if request.method == 'GET':
         return render(request, 'signin.html', {
             'form': AuthenticationForm
         })
-    else: 
-        user = authenticate(request, username=request.POST['username'], password=request.POST['password'])
+    else:
+        user = authenticate(
+            request,
+            username=request.POST['username'],
+            password=request.POST['password']
+        )
         if user is None:
             return render(request, 'signin.html', {
                 'form': AuthenticationForm,
@@ -58,7 +56,6 @@ def signin(request):
             })
         else:
             login(request, user)
-            # Redirige a la vista que muestra la lista de usuarios
             return redirect('userlist')
         
 def exit(request):
@@ -82,60 +79,53 @@ def user_profile(request):
 @login_required
 @require_http_methods(["GET", "POST"])
 def add_user(request):
-    # Solo administradores pueden crear usuarios
     if not request.user.is_staff:
         raise PermissionDenied("Solo los administradores pueden crear usuarios.")
-    
+
     if request.method == 'POST':
         form = EmpleadoCreationForm(request.POST)
-        # Validar que solo super usuarios pueden crear administradores
         if form.is_valid():
             rol = form.cleaned_data.get('rol')
+            # Solo superuser puede crear administradores
             if rol == 'administrador' and not request.user.is_superuser:
-                return JsonResponse({'success': False, 'errors': {'rol': ['Solo los super administradores pueden crear administradores.']}})
-            
-            new_user = form.save(requesting_user=request.user)
-            messages.success(request, f"El usuario {new_user.nombre} ha sido creado correctamente.")
-            return JsonResponse({'success': True, 'message': f"El usuario {new_user.nombre} ha sido creado correctamente."})
+                return JsonResponse({
+                    'success': False,
+                    'errors': {'rol': ['Solo los super administradores pueden crear administradores.']}
+                })
+
+            empleado = form.save(commit=True)
+            return JsonResponse({
+                'success': True,
+                'message': f"Usuario {empleado.nombre} creado correctamente."
+            })
         else:
-            print(f"Form errors: {form.errors}")  # Add this line for debugging
             return JsonResponse({'success': False, 'errors': form.errors})
     else:
         form = EmpleadoCreationForm()
-    
+
     return render(request, 'add_user.html', {'form': form})
+
 
 
 @login_required
 @require_http_methods(["GET", "POST"])
 def edit_user(request, user_id):
-    # Solo administradores pueden editar usuarios
-    if not request.user.is_staff:
-        raise PermissionDenied("Solo los administradores pueden editar usuarios.")
-    
-    empleado = get_object_or_404(Empleados, id_user__id=user_id)
-    
-    # No permitir editar usuarios con mayor privilegio
-    if empleado.id_user.is_superuser and not request.user.is_superuser:
-        raise PermissionDenied("No puedes editar un super administrador.")
-    
+    try:
+        empleado = Empleados.objects.get(id_user__id=user_id)
+    except Empleados.DoesNotExist:
+        return JsonResponse({'success': False, 'errors': 'Empleado no encontrado.'})
+
     if request.method == 'POST':
         form = EditarEmpleadoForm(request.POST, instance=empleado)
         if form.is_valid():
-            rol = form.cleaned_data.get('rol')
-            # Validar permisos para asignar rol de administrador
-            if rol == 'administrador' and not request.user.is_superuser:
-                return JsonResponse({'success': False, 'errors': {'rol': ['Solo los super administradores pueden asignar el rol de administrador.']}})
-            
-            updated_user = form.save(requesting_user=request.user)
-            messages.success(request, f"El usuario {updated_user.nombre} ha sido actualizado correctamente.")
-            return JsonResponse({'success': True, 'message': f"El usuario {updated_user.nombre} ha sido actualizado correctamente."})
+            form.save()
+            return JsonResponse({'success': True, 'message': f'Usuario {empleado.nombre} actualizado correctamente.'})
         else:
             return JsonResponse({'success': False, 'errors': form.errors})
     else:
         form = EditarEmpleadoForm(instance=empleado)
-    return render(request, 'edit_user.html', {'form': form, 'empleado': empleado})
 
+    return render(request, 'edit_user.html', {'form': form})
 
 @login_required
 @require_http_methods(["POST"])

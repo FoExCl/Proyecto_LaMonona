@@ -328,12 +328,18 @@
                     if (data.success) {
                         alert(data.message);
                         userModal.hide();
-                        window.location.reload();
+                     window.location.reload();
                     } else {
-                        // Show errors
-                        console.log('Form errors:', data.errors);
-                        alert('Hay errores en el formulario. Por favor, revisa los datos.');
-                    }
+                        const errors = data.errors;
+                        let errorHtml = '<ul>';
+                        for (let field in errors) {
+                            errors[field].forEach(err => {
+                                errorHtml += `<li><strong>${field}:</strong> ${err}</li>`;
+                            });
+                        }
+                        errorHtml += '</ul>';
+                        modalBody.innerHTML = errorHtml + modalBody.innerHTML;
+                }
                 })
                 .catch(error => {
                     console.error('Error:', error);
