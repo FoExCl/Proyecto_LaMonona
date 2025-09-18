@@ -1,0 +1,11 @@
+[project]
+name = "repl-nix-workspace"
+version = "0.1.0"
+description = "Add your description here"
+requires-python = ">=3.11"
+dependencies = [
+    "crispy-bootstrap5>=2025.6",
+    "django-crispy-forms>=2.4",
+    "django==5.1.1",
+    "django-bootstrap5>=25.2",
+]
