@@ -4,7 +4,8 @@ from django.contrib.auth.forms import UserCreationForm, AuthenticationForm
 from .models import Empleados, AuthUser, AuthUserGroups, AuthUserUserPermissions, Ventas, Productos, Cajas
 from .forms import EmpleadoCreationForm, EditarEmpleadoForm, EditarPerfilForm, CambiarContraseñaForm
 from django.contrib import messages
-from django.contrib.auth.decorators import login_required
+from django.contrib.auth.decorators import login_required, permission_required
+from django.core.exceptions import PermissionDenied
 from django.db import transaction
 from django.views.decorators.http import require_http_methods
 from django.contrib.auth import update_session_auth_hash
@@ -28,6 +29,10 @@ def inicio(request):
 # Esta vista ahora mostrará la lista de usuarios si el usuario está autenticado
 @login_required
 def user_list(request):
+    # Solo administradores pueden ver la lista completa de usuarios
+    if not request.user.is_staff:
+        raise PermissionDenied("Solo los administradores pueden ver la lista de usuarios.")
+    
     empleados = Empleados.objects.all().select_related('id_user')
     return render(request, 'userlist.html', {'empleados': empleados})
 
@@ -77,10 +82,19 @@ def user_profile(request):
 @login_required
 @require_http_methods(["GET", "POST"])
 def add_user(request):
+    # Solo administradores pueden crear usuarios
+    if not request.user.is_staff:
+        raise PermissionDenied("Solo los administradores pueden crear usuarios.")
+    
     if request.method == 'POST':
         form = EmpleadoCreationForm(request.POST)
+        # Validar que solo super usuarios pueden crear administradores
         if form.is_valid():
-            new_user = form.save()
+            rol = form.cleaned_data.get('rol')
+            if rol == 'administrador' and not request.user.is_superuser:
+                return JsonResponse({'success': False, 'errors': {'rol': ['Solo los super administradores pueden crear administradores.']}})
+            
+            new_user = form.save(requesting_user=request.user)
             messages.success(request, f"El usuario {new_user.nombre} ha sido creado correctamente.")
             return JsonResponse({'success': True, 'message': f"El usuario {new_user.nombre} ha sido creado correctamente."})
         else:
@@ -95,11 +109,25 @@ def add_user(request):
 @login_required
 @require_http_methods(["GET", "POST"])
 def edit_user(request, user_id):
+    # Solo administradores pueden editar usuarios
+    if not request.user.is_staff:
+        raise PermissionDenied("Solo los administradores pueden editar usuarios.")
+    
     empleado = get_object_or_404(Empleados, id_user__id=user_id)
+    
+    # No permitir editar usuarios con mayor privilegio
+    if empleado.id_user.is_superuser and not request.user.is_superuser:
+        raise PermissionDenied("No puedes editar un super administrador.")
+    
     if request.method == 'POST':
         form = EditarEmpleadoForm(request.POST, instance=empleado)
         if form.is_valid():
-            updated_user = form.save()
+            rol = form.cleaned_data.get('rol')
+            # Validar permisos para asignar rol de administrador
+            if rol == 'administrador' and not request.user.is_superuser:
+                return JsonResponse({'success': False, 'errors': {'rol': ['Solo los super administradores pueden asignar el rol de administrador.']}})
+            
+            updated_user = form.save(requesting_user=request.user)
             messages.success(request, f"El usuario {updated_user.nombre} ha sido actualizado correctamente.")
             return JsonResponse({'success': True, 'message': f"El usuario {updated_user.nombre} ha sido actualizado correctamente."})
         else:
@@ -112,8 +140,21 @@ def edit_user(request, user_id):
 @login_required
 @require_http_methods(["POST"])
 def toggle_user_active(request, user_id):
+    # Solo administradores pueden cambiar el estado de usuarios
+    if not request.user.is_staff:
+        raise PermissionDenied("Solo los administradores pueden cambiar el estado de usuarios.")
+    
+    # No permitir cambiar el estado de uno mismo
+    if str(request.user.id) == str(user_id):
+        return JsonResponse({'success': False, 'error': 'No puedes cambiar tu propio estado.'})
+    
     empleado = get_object_or_404(Empleados, id_user__id=user_id)
     user = empleado.id_user
+    
+    # No permitir desactivar super administradores si no eres super administrador
+    if user.is_superuser and not request.user.is_superuser:
+        return JsonResponse({'success': False, 'error': 'No puedes cambiar el estado de un super administrador.'})
+    
     user.is_active = not user.is_active
     user.save()
     
@@ -160,6 +201,15 @@ class CustomPasswordResetConfirmView(PasswordResetConfirmView):
 @require_http_methods(["POST"])
 def edit_profile(request, user_id):
     empleado = get_object_or_404(Empleados, id_user__id=user_id)
+    
+    # Solo el propietario del perfil o un administrador pueden editarlo
+    if str(request.user.id) != str(user_id) and not request.user.is_staff:
+        raise PermissionDenied("Solo puedes editar tu propio perfil o ser administrador.")
+    
+    # No permitir que no-super administradores editen super administradores
+    if empleado.id_user.is_superuser and not request.user.is_superuser:
+        raise PermissionDenied("No puedes editar el perfil de un super administrador.")
+    
     if request.method == 'POST':
         form = EditarPerfilForm(request.POST, instance=empleado)
         if form.is_valid():

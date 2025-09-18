@@ -45,7 +45,7 @@ class EmpleadoCreationForm(forms.ModelForm):
         if password1 and password2 and password1 != password2:
             raise ValidationError("Las contraseñas no coinciden.")
 
-    def save(self, commit=True):
+    def save(self, commit=True, requesting_user=None):
         username = self.cleaned_data['username']
         password = make_password(self.cleaned_data['password1'])
         correo = self.cleaned_data['correo']
@@ -54,14 +54,20 @@ class EmpleadoCreationForm(forms.ModelForm):
         id_empleado = self.cleaned_data['id_empleado']
         rol = self.cleaned_data['rol']
 
+        # Manejar privilegios de forma segura basado en el usuario solicitante
+        is_staff = rol == 'administrador'
+        is_superuser = False
+        if rol == 'administrador' and requesting_user and requesting_user.is_superuser:
+            is_superuser = True
+
         user = AuthUser(
             username=username,
             email=correo,
             first_name=first_name,
             last_name=last_name,
             is_active=True,
-            is_staff=rol == 'administrador',
-            is_superuser=rol == 'administrador',
+            is_staff=is_staff,
+            is_superuser=is_superuser,
             password=password,
             date_joined=timezone.now()
         )
@@ -118,7 +124,7 @@ class EditarEmpleadoForm(forms.ModelForm):
             raise forms.ValidationError('Este ID Empleado ya está registrado por otro usuario.')
         return id_empleado
 
-    def save(self, commit=True):
+    def save(self, commit=True, requesting_user=None):
         empleado = super().save(commit=False)
         user = empleado.id_user
 
@@ -127,8 +133,19 @@ class EditarEmpleadoForm(forms.ModelForm):
         user.last_name = self.cleaned_data['apellido']
         user.email = self.cleaned_data['correo']
         user.is_active = self.cleaned_data['is_active']
-        user.is_staff = self.cleaned_data['rol'] == 'administrador'
-        user.is_superuser = False
+        
+        # Manejar privilegios de administrador de forma segura
+        new_rol = self.cleaned_data['rol']
+        if new_rol == 'administrador':
+            user.is_staff = True
+            # Solo preservar is_superuser si ya lo era o si el usuario solicitante es superuser
+            if not user.is_superuser and requesting_user and requesting_user.is_superuser:
+                user.is_superuser = True
+        else:
+            user.is_staff = False
+            # Solo remover is_superuser si el usuario solicitante es superuser
+            if user.is_superuser and requesting_user and requesting_user.is_superuser:
+                user.is_superuser = False
 
         empleado.id_empleado = self.cleaned_data['id_empleado']
 
@@ -137,7 +154,6 @@ class EditarEmpleadoForm(forms.ModelForm):
             empleado.save()
 
             # Update user group
-            new_rol = self.cleaned_data['rol']
             current_user_group = AuthUserGroups.objects.filter(user=user).first()
             if current_user_group:
                 current_user_group.delete()
