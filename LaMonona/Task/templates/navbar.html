@@ -6,8 +6,8 @@
       <span class="navbar-toggler-icon"></span>
     </button>
     <a class="navbar-brand" href="/">
-      <img src="https://github.com/JuncoAriel/img/blob/main/2.png?raw=true" alt="Logo" width="30" height="30" class="d-inline-block align-text-top me-2">
-      Ely Baby
+      <img src="" alt="Logo" width="30" height="30" class="d-inline-block align-text-top me-2">
+      Las Mononas
     </a>
   </div>
 </nav>
@@ -15,8 +15,8 @@
 <div class="offcanvas offcanvas-start text-bg-dark" tabindex="-1" id="sidebar" aria-labelledby="sidebarLabel" style="width: 250px;">
   <div class="offcanvas-header">
     <h5 class="offcanvas-title" id="sidebarLabel">
-      <img src="https://github.com/JuncoAriel/img/blob/main/2.png?raw=true" alt="Logo" width="30" height="30" class="me-2">
-      Ely Baby
+      <img src="" alt="Logo" width="30" height="30" class="me-2">
+      Las Mononas
     </h5>
     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas" aria-label="Close"></button>
   </div>
@@ -35,6 +35,12 @@
           <a href="{% url 'userlist' %}" class="nav-link text-white">
             <i class="nav-icon fas fa-users"></i>
             Lista de usuarios
+          </a>
+        </li>
+        <li class="nav-item">
+          <a href="{% url 'lista_cajas' %}" class="nav-link text-white">
+            <i class="nav-icon fas fa-box"></i>
+            Listado de Cajas
           </a>
         </li>
         {% endif %}

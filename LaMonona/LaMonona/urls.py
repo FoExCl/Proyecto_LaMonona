@@ -24,6 +24,8 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('inicio/', views.inicio, name='inicio'),
     path('', views.signin, name='signin'),
+    path('cajas/', include('CajasApp.urls')),
+    path('ventas/', include('VentasApp.urls')),
 
     path('users/', views.user_list, name='userlist'),
     path('users/add/', views.add_user, name='add_user'),

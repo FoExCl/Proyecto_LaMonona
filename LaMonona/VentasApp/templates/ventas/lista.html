@@ -1,0 +1,25 @@
+<h1>Listado de Ventas</h1>
+<a href="{% url 'crear_venta' %}">➕ Nueva Venta</a>
+<table border="1">
+    <tr>
+        <th>ID</th>
+        <th>Turno</th>
+        <th>Cliente</th>
+        <th>Fecha</th>
+        <th>Total</th>
+        <th>Acciones</th>
+    </tr>
+    {% for venta in ventas %}
+    <tr>
+        <td>{{ venta.id_venta }}</td>
+        <td>{{ venta.id_turno.id_turno }}</td>
+        <td>{{ venta.nombre_cliente }}</td>
+        <td>{{ venta.fecha_venta }}</td>
+        <td>{{ venta.total_venta }}</td>
+        <td>
+            <a href="{% url 'editar_venta' venta.id_venta %}">✏️ Editar</a>
+            <a href="{% url 'eliminar_venta' venta.id_venta %}">🗑️ Eliminar</a>
+        </td>
+    </tr>
+    {% endfor %}
+</table>
