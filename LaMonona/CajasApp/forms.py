@@ -20,9 +20,8 @@ class CajaForm(forms.ModelForm):
         model = Cajas
         fields = ['id_sucursal', 'ubicacion', 'estado']
         widgets = {
-            'id_sucursal': forms.Select(attrs={'class': 'form-control'}),
+            'id_sucursal': forms.HiddenInput(),  # 👈 ahora siempre hidden
         }
-        
 class TurnoForm(forms.ModelForm):
     class Meta:
         model = TurnosCaja

@@ -8,7 +8,6 @@
     <!-- Bootstrap CSS -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
 
-    <!-- Estilo personalizado -->
     <style>
         body {
             font-family: 'Arial', sans-serif;
@@ -73,9 +72,25 @@
         </div>
 
         <div class="container-box">
-            <form method="post">
+            <form method="post" id="cajaForm"
+                  action="{% if form.instance.pk %}{% url 'editar_caja' form.instance.pk %}{% else %}{% url 'crear_caja' %}{% endif %}">
                 {% csrf_token %}
-                {{ form.as_p }}
+
+                <!-- Ubicación -->
+                <div class="mb-3">
+                    <label for="id_ubicacion">Ubicación</label>
+                    {{ form.ubicacion }}
+                </div>
+
+                <!-- Estado -->
+                <div class="mb-3">
+                    <label for="id_estado">Estado</label>
+                    {{ form.estado }}
+                </div>
+
+                <!-- Campo oculto para id_sucursal -->
+                {{ form.id_sucursal.as_hidden }}
+
                 <div class="d-flex justify-content-between">
                     <a href="{% url 'lista_cajas' %}" class="btn btn-secondary">⬅️ Volver</a>
                     <button type="submit" class="btn btn-primary">💾 Guardar</button>
@@ -83,8 +98,35 @@
             </form>
         </div>
     </div>
+    
+<script>
+    // Cuando cambie la ubicación, actualizar automáticamente el id_sucursal oculto
+    document.addEventListener("DOMContentLoaded", function () {
+        const ubicacionField = document.getElementById("id_ubicacion");
+        const sucursalField = document.getElementById("id_sucursal");
 
-    <!-- Bootstrap JS -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+        function actualizarSucursal() {
+            switch (ubicacionField.value) {
+                case "Monona, zn oeste":
+                    sucursalField.value = 1;
+                    break;
+                case "Monona, zn norte":
+                    sucursalField.value = 2;
+                    break;
+                default:
+                    sucursalField.value = "";
+            }
+        }
+
+        // Inicializar en caso de edición
+        actualizarSucursal();
+
+        // Cada vez que cambia
+        ubicacionField.addEventListener("change", actualizarSucursal);
+    });
+</script>
+
+<!-- Bootstrap JS -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>

@@ -22,42 +22,50 @@ import json
 
 logger = logging.getLogger(__name__)
 
-
+@login_required
 def inicio(request):
-    return render(request, 'inicio.html')
+    try:
+        # Obtenemos el AuthUser desde tu tabla
+        auth_user = AuthUser.objects.get(username=request.user.username)
+
+        # Buscamos si es empleado
+        Empleados.objects.get(id_user=auth_user)
+        # Si existe → es empleado
+        return redirect('lista_cajas')
+
+    except AuthUser.DoesNotExist:
+        # Esto casi nunca pasa
+        messages.error(request, "Usuario no existe en AuthUser")
+        return redirect('signin')
+
+    except Empleados.DoesNotExist:
+        # No es empleado → admin
+        return redirect('userlist')
 
 # Esta vista ahora mostrará la lista de usuarios si el usuario está autenticado
+
 @login_required
 def user_list(request):
-    # Solo administradores pueden ver la lista completa de usuarios
-    if not request.user.is_staff:
-        raise PermissionDenied("Solo los administradores pueden ver la lista de usuarios.")
-    
-    empleados = Empleados.objects.all().select_related('id_user')
-    return render(request, 'userlist.html', {'empleados': empleados})
+    # Muestra todos los usuarios (admins)
+    users = AuthUser.objects.all()
+    return render(request, 'userlist.html', {'users': users})
+
 
 # La vista original de combined_charts no es necesaria si userlist_view ya la maneja,
 # pero la mantengo por si la necesitas para otro propósito.
 def signin(request):
-    if request.method == 'GET':
-        return render(request, 'signin.html', {
-            'form': AuthenticationForm
-        })
-    else:
-        user = authenticate(
-            request,
-            username=request.POST['username'],
-            password=request.POST['password']
-        )
-        if user is None:
-            return render(request, 'signin.html', {
-                'form': AuthenticationForm,
-                'error': 'Usuario o contraseña incorrectos'
-            })
-        else:
+    if request.method == "POST":
+        username = request.POST.get("username")
+        password = request.POST.get("password")
+        user = authenticate(request, username=username, password=password)
+        if user is not None:
             login(request, user)
-            return redirect('userlist')
+            return redirect('inicio')  # redirige a la vista de inicio según rol
+        else:
+            messages.error(request, "Usuario o contraseña incorrecta")
+    return render(request, 'signin.html')
         
+@login_required
 def exit(request):
     logout(request)
     return redirect('signin')

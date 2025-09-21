@@ -23,14 +23,6 @@
             background-position: 0 0, 0 10px, 10px -10px, -10px 0px;
             min-height: 100vh;
         }
-        #cuadro {
-            background-color: #be185d;
-            color: #f0f0f0f0;
-        }
-        .sorting {
-            color: white;
-            background-color: white;
-        }
         .container-box {
             background-color: white;
             color: #be185d;
@@ -41,15 +33,6 @@
             margin-bottom: 15px;
             width: 100%;
             max-width: 1200px;
-        }
-        label {
-            color: black;
-        }
-        .dataTables_info {
-            color: black;
-        }
-        .form-control {
-            color: black;
         }
         .title-box {
             background-color: white;
@@ -68,47 +51,13 @@
             background-color: #be185d !important;
             border-color: #a31450 !important;
             color: white !important;
-            outline: none !important;
         }
         .btn-primary:hover, .btn-secondary:hover {
             background-color: #a31450 !important;
             border-color: #7f0f3c !important;
         }
-        .btn-primary:focus, .btn-primary:active, .btn-secondary:focus, .btn-secondary:active {
-            background-color: #a31450 !important;
-            border-color: #7f0f3c !important;
-            outline: none !important;
+        .btn-primary:focus, .btn-secondary:focus {
             box-shadow: none !important;
-        }
-        .inactive-user {
-            background-color: #f8d7da;
-            color: #721c24;
-        }
-        .table-responsive {
-            overflow-x: auto;
-        }
-        .btn-group-sm > .btn {
-            padding: 0.25rem 0.5rem;
-            font-size: 0.75rem;
-            line-height: 1.5;
-        }
-        @media (max-width: 768px) {
-            .container-box, .title-box {
-                width: 95%;
-                padding: 10px;
-            }
-            .table th, .table td {
-                font-size: 0.8rem;
-                padding: 4px;
-            }
-            .btn-group-sm > .btn {
-                padding: 0.2rem 0.4rem;
-                font-size: 0.7rem;
-            }
-            .dataTables_filter, .dataTables_length {
-                text-align: left;
-                margin-bottom: 10px;
-            }
         }
     </style>
 </head>
@@ -118,7 +67,9 @@
             <h1>Listado de Cajas</h1>
         </div>
         <div class="mb-3">
-            <a href="{% url 'crear_caja' %}" class="btn btn-primary">➕ Nueva Caja</a>
+            <button class="btn btn-primary js-crear-caja" data-url="{% url 'crear_caja' %}">
+                ➕ Nueva Caja
+            </button>
         </div>
 
         <div class="table-responsive container-box">
@@ -140,13 +91,24 @@
                         <td>{{ caja.ubicacion }}</td>
                         <td>{{ caja.estado }}</td>
                         <td>
-                            <a href="{% url 'editar_caja' caja.id_caja %}" class="btn btn-sm btn-warning">✏️ Editar</a>
+                            <button class="btn btn-sm btn-warning js-editar-caja" data-url="{% url 'editar_caja' caja.id_caja %}">
+                                ✏️ Editar
+                            </button>
                             <a href="{% url 'eliminar_caja' caja.id_caja %}" class="btn btn-sm btn-danger">🗑️ Eliminar</a>
                         </td>
                     </tr>
                     {% endfor %}
                 </tbody>
             </table>
+        </div>
+    </div>
+
+    <!-- Modal (se rellena dinámicamente con el form) -->
+    <div class="modal fade" id="modalCaja" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <!-- El contenido se carga vía AJAX -->
+            </div>
         </div>
     </div>
 
@@ -158,13 +120,28 @@
     <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
     <script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js"></script>
 
-    <!-- Inicialización -->
     <script>
         $(document).ready(function() {
             $('#tablaCajas').DataTable({
                 "language": {
                     "url": "//cdn.datatables.net/plug-ins/1.13.6/i18n/es-ES.json"
                 }
+            });
+
+            // Abrir modal de crear
+            $(".js-crear-caja").click(function() {
+                const url = $(this).data("url");
+                $("#modalCaja .modal-content").load(url, function() {
+                    $("#modalCaja").modal("show");
+                });
+            });
+
+            // Abrir modal de editar
+            $(".js-editar-caja").click(function() {
+                const url = $(this).data("url");
+                $("#modalCaja .modal-content").load(url, function() {
+                    $("#modalCaja").modal("show");
+                });
             });
         });
     </script>
