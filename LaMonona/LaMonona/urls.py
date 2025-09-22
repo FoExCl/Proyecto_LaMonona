@@ -37,6 +37,13 @@ urlpatterns = [
 
     path('user/', views.user_profile, name='user'),
     
+    # URLs para gestión de productos
+    path('productos/', views.lista_productos, name='lista_productos'),
+    path('productos/nuevo/', views.crear_producto, name='crear_producto'),
+    path('productos/editar/<int:producto_id>/', views.editar_producto, name='editar_producto'),
+    path('productos/eliminar/<int:producto_id>/', views.eliminar_producto, name='eliminar_producto'),
+    path('productos/dashboard/', views.dashboard_stock, name='dashboard_stock'),
+    
     path('logout/', views.exit, name='exit'),
     path('password_reset/', 
          auth_views.PasswordResetView.as_view(

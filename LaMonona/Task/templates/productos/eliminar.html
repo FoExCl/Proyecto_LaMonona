@@ -62,7 +62,7 @@
         border-color: #ffecb5;
         color: #856404;
     }
-    .sale-details {
+    .product-details {
         background-color: #f8f9fa;
         border: 1px solid #e9ecef;
         border-radius: 5px;
@@ -90,46 +90,70 @@
 
 <div class="container-fluid d-flex flex-column align-items-center">
     <div class="title-box">
-        <h1><i class="fas fa-exclamation-triangle text-warning"></i> Eliminar Venta</h1>
+        <h1><i class="fas fa-exclamation-triangle text-warning"></i> Eliminar Producto</h1>
     </div>
     <div class="container-box">
         <div class="alert alert-warning" role="alert">
             <i class="fas fa-warning"></i>
-            <strong>¡Atención!</strong> Esta acción no se puede deshacer.
+            <strong>¡Atención!</strong> Esta acción no se puede deshacer. Se eliminará permanentemente el producto del inventario.
         </div>
         
-        <p class="text-center mb-4">¿Estás seguro de que deseas eliminar la siguiente venta?</p>
+        <p class="text-center mb-4">¿Estás seguro de que deseas eliminar el siguiente producto?</p>
         
-        <div class="sale-details">
+        <div class="product-details">
             <div class="detail-row">
-                <span class="detail-label">ID de Venta:</span>
-                <span>#{{ venta.id_venta }}</span>
+                <span class="detail-label">ID del Producto:</span>
+                <span>#{{ producto.id_producto }}</span>
             </div>
             <div class="detail-row">
-                <span class="detail-label">Turno:</span>
-                <span>Turno #{{ venta.id_turno.id_turno }}</span>
+                <span class="detail-label">Nombre:</span>
+                <span>{{ producto.nombre_producto }}</span>
             </div>
             <div class="detail-row">
-                <span class="detail-label">Cliente:</span>
-                <span>{{ venta.nombre_cliente|default:"Cliente sin nombre" }}</span>
+                <span class="detail-label">Descripción:</span>
+                <span>{{ producto.descripcion|default:"Sin descripción" }}</span>
             </div>
             <div class="detail-row">
-                <span class="detail-label">Fecha:</span>
-                <span>{{ venta.fecha_venta|date:"d/m/Y H:i" }}</span>
+                <span class="detail-label">Precio:</span>
+                <span class="text-success fw-bold">${{ producto.precio|floatformat:2 }}</span>
             </div>
             <div class="detail-row">
-                <span class="detail-label">Total:</span>
-                <span class="text-success fw-bold">${{ venta.total_venta|floatformat:2 }}</span>
+                <span class="detail-label">Stock Actual:</span>
+                <span class="fw-bold">{{ producto.stock }} unidades</span>
+            </div>
+            <div class="detail-row">
+                <span class="detail-label">Stock Mínimo:</span>
+                <span>{{ producto.stock_minimo }} unidades</span>
+            </div>
+            <div class="detail-row">
+                <span class="detail-label">Estado:</span>
+                <span>
+                    {% if producto.stock <= 0 %}
+                        <span class="badge bg-danger">Sin Stock</span>
+                    {% elif producto.necesita_restock %}
+                        <span class="badge bg-warning">Stock Bajo</span>
+                    {% else %}
+                        <span class="badge bg-success">Stock Normal</span>
+                    {% endif %}
+                </span>
             </div>
         </div>
+
+        {% if producto.stock > 0 %}
+        <div class="alert alert-info" role="alert">
+            <i class="fas fa-info-circle"></i>
+            <strong>Nota:</strong> Este producto todavía tiene {{ producto.stock }} unidades en stock. 
+            ¿Estás seguro de eliminarlo del inventario?
+        </div>
+        {% endif %}
         
         <form method="post" class="text-center">
             {% csrf_token %}
             <div class="d-flex justify-content-center gap-3">
                 <button type="submit" class="btn btn-danger">
-                    <i class="fas fa-trash"></i> Sí, Eliminar
+                    <i class="fas fa-trash"></i> Sí, Eliminar Producto
                 </button>
-                <a href="{% url 'lista_ventas' %}" class="btn btn-success">
+                <a href="{% url 'lista_productos' %}" class="btn btn-success">
                     <i class="fas fa-times"></i> Cancelar
                 </a>
             </div>

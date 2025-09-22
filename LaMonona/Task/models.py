@@ -178,10 +178,29 @@ class Productos(models.Model):
     descripcion = models.CharField(max_length=255, blank=True, null=True)
     precio = models.DecimalField(max_digits=10, decimal_places=2)
     stock = models.IntegerField()
+    stock_minimo = models.IntegerField(default=5, help_text='Stock mínimo antes de mostrar alerta')
 
     class Meta:
-        managed = False
+        managed = True  # Changed to True so Django can manage this model
         db_table = 'productos'
+        
+    def __str__(self):
+        return self.nombre_producto
+        
+    @property
+    def necesita_restock(self):
+        """Devuelve True si el stock actual es menor o igual al stock mínimo"""
+        return self.stock <= self.stock_minimo
+        
+    @property
+    def estado_stock(self):
+        """Devuelve el estado del stock para mostrar en la interfaz"""
+        if self.stock <= 0:
+            return 'sin_stock'
+        elif self.stock <= self.stock_minimo:
+            return 'stock_bajo'
+        else:
+            return 'stock_normal'
 
 
 class Sucursales(models.Model):

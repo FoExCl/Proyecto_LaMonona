@@ -2,7 +2,10 @@ from django import forms
 from django.contrib.auth.hashers import make_password
 from django.core.exceptions import ValidationError
 from django.utils import timezone
-from .models import Empleados, AuthUser, AuthGroup, AuthUserGroups
+from .models import Empleados, AuthUser, AuthGroup, AuthUserGroups, Productos
+from crispy_forms.helper import FormHelper
+from crispy_forms.layout import Layout, Submit, Div, Field, Row, Column
+from crispy_forms.bootstrap import FormActions
 
 class EmpleadoCreationForm(forms.ModelForm):
     username = forms.CharField(max_length=150, required=True, label="Nombre de usuario")
@@ -175,3 +178,45 @@ class CambiarContraseñaForm(forms.Form):
             raise forms.ValidationError("Las nuevas contraseñas no coinciden.")
 
         return cleaned_data
+
+
+class ProductoForm(forms.ModelForm):
+    class Meta:
+        model = Productos
+        fields = ['nombre_producto', 'descripcion', 'precio', 'stock', 'stock_minimo']
+        widgets = {
+            'nombre_producto': forms.TextInput(attrs={'placeholder': 'Nombre del producto'}),
+            'descripcion': forms.Textarea(attrs={'placeholder': 'Descripción del producto', 'rows': 3}),
+            'precio': forms.NumberInput(attrs={'step': '0.01', 'min': '0'}),
+            'stock': forms.NumberInput(attrs={'min': '0'}),
+            'stock_minimo': forms.NumberInput(attrs={'min': '1', 'value': '5'}),
+        }
+        labels = {
+            'nombre_producto': 'Nombre del Producto',
+            'descripcion': 'Descripción',
+            'precio': 'Precio (MXN)',
+            'stock': 'Stock Actual',
+            'stock_minimo': 'Stock Mínimo (Alerta)',
+        }
+        help_texts = {
+            'stock_minimo': 'Cuando el stock llegue a este número o menos, se mostrará una alerta',
+        }
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.helper = FormHelper()
+        self.helper.form_method = 'post'
+        self.helper.layout = Layout(
+            Row(
+                Column(Field('nombre_producto', css_class='form-control'), css_class='col-md-8'),
+                Column(Field('precio', css_class='form-control'), css_class='col-md-4'),
+            ),
+            Field('descripcion', css_class='form-control'),
+            Row(
+                Column(Field('stock', css_class='form-control'), css_class='col-md-6'),
+                Column(Field('stock_minimo', css_class='form-control'), css_class='col-md-6'),
+            ),
+            FormActions(
+                Submit('submit', '💾 Guardar Producto', css_class='btn btn-primary'),
+            )
+        )

@@ -2,7 +2,7 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth import login, logout, authenticate
 from django.contrib.auth.forms import UserCreationForm, AuthenticationForm
 from .models import Empleados, AuthUser, AuthUserGroups, AuthUserUserPermissions, Ventas, Productos, Cajas
-from .forms import EmpleadoCreationForm, EditarEmpleadoForm, EditarPerfilForm, CambiarContraseñaForm
+from .forms import EmpleadoCreationForm, EditarEmpleadoForm, EditarPerfilForm, CambiarContraseñaForm, ProductoForm
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required, permission_required
 from django.core.exceptions import PermissionDenied
@@ -16,7 +16,7 @@ from django.http import JsonResponse
 from django.db.models import Count
 from django.db.models.functions import TruncMonth,TruncWeek
 from django.utils.translation import activate
-from django.db.models import Count, Sum
+from django.db.models import Count, Sum, F
 import logging
 import json
 
@@ -217,3 +217,106 @@ def edit_profile(request, user_id):
         else:
             messages.error(request, "Error al actualizar el perfil.")
     return redirect('user')
+
+
+# ===== VISTAS PARA GESTIÓN DE PRODUCTOS Y STOCK =====
+
+@login_required
+def lista_productos(request):
+    """Lista todos los productos con alertas de stock bajo"""
+    productos = Productos.objects.all().order_by('nombre_producto')
+    productos_bajo_stock = productos.filter(stock__lte=F('stock_minimo'))
+    productos_sin_stock = productos.filter(stock=0)
+    
+    context = {
+        'productos': productos,
+        'productos_bajo_stock': productos_bajo_stock,
+        'productos_sin_stock': productos_sin_stock,
+        'alertas_count': productos_bajo_stock.count(),
+    }
+    return render(request, 'productos/lista.html', context)
+
+@login_required
+@permission_required('Task.add_productos', raise_exception=True)
+def crear_producto(request):
+    """Crear un nuevo producto"""
+    if request.method == 'POST':
+        form = ProductoForm(request.POST)
+        if form.is_valid():
+            producto = form.save()
+            messages.success(request, f'Producto "{producto.nombre_producto}" creado exitosamente.')
+            return redirect('lista_productos')
+        else:
+            messages.error(request, 'Error al crear el producto. Verifica los datos.')
+    else:
+        form = ProductoForm()
+    
+    return render(request, 'productos/form.html', {'form': form, 'title': 'Nuevo Producto'})
+
+@login_required
+@permission_required('Task.change_productos', raise_exception=True)
+def editar_producto(request, producto_id):
+    """Editar un producto existente"""
+    producto = get_object_or_404(Productos, id_producto=producto_id)
+    
+    if request.method == 'POST':
+        form = ProductoForm(request.POST, instance=producto)
+        if form.is_valid():
+            producto_editado = form.save()
+            messages.success(request, f'Producto "{producto_editado.nombre_producto}" actualizado exitosamente.')
+            
+            # Verificar si el stock está bajo después de la edición
+            if producto_editado.necesita_restock:
+                messages.warning(request, f'¡ALERTA! El producto "{producto_editado.nombre_producto}" tiene stock bajo ({producto_editado.stock} unidades).')
+            
+            return redirect('lista_productos')
+        else:
+            messages.error(request, 'Error al actualizar el producto. Verifica los datos.')
+    else:
+        form = ProductoForm(instance=producto)
+    
+    return render(request, 'productos/form.html', {
+        'form': form, 
+        'title': f'Editar Producto: {producto.nombre_producto}',
+        'producto': producto
+    })
+
+@login_required
+@permission_required('Task.delete_productos', raise_exception=True)
+def eliminar_producto(request, producto_id):
+    """Eliminar un producto"""
+    producto = get_object_or_404(Productos, id_producto=producto_id)
+    
+    if request.method == 'POST':
+        nombre_producto = producto.nombre_producto
+        producto.delete()
+        messages.success(request, f'Producto "{nombre_producto}" eliminado exitosamente.')
+        return redirect('lista_productos')
+    
+    return render(request, 'productos/eliminar.html', {'producto': producto})
+
+@login_required
+def dashboard_stock(request):
+    """Dashboard con alertas de stock y estadísticas"""
+    
+    productos_total = Productos.objects.count()
+    productos_bajo_stock = Productos.objects.filter(stock__lte=F('stock_minimo'))
+    productos_sin_stock = Productos.objects.filter(stock=0)
+    productos_stock_normal = Productos.objects.filter(stock__gt=F('stock_minimo'))
+    
+    # Productos que más necesitan restock (ordenados por diferencia entre stock y stock_minimo)
+    productos_criticos = productos_bajo_stock.extra(
+        select={'diferencia': 'stock_minimo - stock'}
+    ).order_by('-diferencia')[:5]
+    
+    context = {
+        'productos_total': productos_total,
+        'productos_bajo_stock': productos_bajo_stock,
+        'productos_sin_stock': productos_sin_stock,
+        'productos_stock_normal': productos_stock_normal,
+        'productos_criticos': productos_criticos,
+        'alertas_count': productos_bajo_stock.count(),
+        'sin_stock_count': productos_sin_stock.count(),
+    }
+    
+    return render(request, 'productos/dashboard.html', context)
